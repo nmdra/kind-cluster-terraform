@@ -1,6 +1,17 @@
 # kind-cluster-terraform
 Terraform configuration to initialize a local Kind cluster for my personal development and testing workflows.
 
+## Usage
+
+```bash
+# Run with ingress disabled
+terraform apply
+
+# Run with ingress enabled
+terraform apply -var="kind_cluster_ingress=true"
+```
+👉 [Test Ingress](./test/README.md) 
+
 ## Resources
 
 - [registry.terraform.io/providers/tehcyx/kind/latest/docs](https://registry.terraform.io/providers/tehcyx/kind/latest/docs)
