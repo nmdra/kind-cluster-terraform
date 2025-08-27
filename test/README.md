@@ -19,16 +19,14 @@ echo "127.0.0.1 httpbin.local" | sudo tee -a /etc/hosts
 * Your local machine DNS doesn’t know this hostname.
 * Updating `/etc/hosts` maps `httpbin.local` to `127.0.0.1` (Kind node), allowing your machine to reach the Ingress controller.
 
-> [NOTE]  
+> [!NOTE]  
 > If you prefer, you can test without updating `/etc/hosts` by manually passing the Host header in curl:
 >
 > ```bash
 > curl -H "Host: httpbin.local" http://127.0.0.1
 > ```
 
----
-
-### 3️⃣ Test the Ingress
+### Test the Ingress
 
 With `/etc/hosts` updated:
 
@@ -41,28 +39,3 @@ Or explicitly set the Host header:
 ```bash
 curl -H "Host: httpbin.local" http://127.0.0.1
 ```
-
-You should see the HTTP response from the `httpbin` pod.
-
----
-
-✅ **Tip:**
-
-* Make sure the Ingress controller pods are running and ready:
-
-```bash
-kubectl get pods -n ingress-nginx
-```
-
-* If the response fails, check that the service has active endpoints:
-
-```bash
-kubectl get svc httpbin
-kubectl get endpoints httpbin
-```
-
----
-
-If you want, I can **rewrite the entire README** to include **Terraform setup + Kustomize + testing instructions** in a clean, step-by-step format that’s ready for GitHub.
-
-Do you want me to do that?
