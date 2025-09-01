@@ -1,7 +1,7 @@
 variable "kind_cluster_name" {
   type        = string
   description = "The name of the cluster."
-  default     = "kind-cluster-tf"
+  default     = ""
 }
 
 variable "kind_cluster_node_image" {

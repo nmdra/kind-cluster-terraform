@@ -1,8 +1,12 @@
-locals {
-  cluster_name = var.kind_cluster_ingress ? "${var.kind_cluster_name}-ingress" : var.kind_cluster_name
+resource "random_pet" "cluster" {
+  length = 2
+  separator = "-"
 }
 
-provider "kind" {}
+locals {
+  base_cluster_name = var.kind_cluster_name != "" ? var.kind_cluster_name : "${random_pet.cluster.id}"
+  cluster_name      = var.kind_cluster_ingress ? "${local.base_cluster_name}-ing" : local.base_cluster_name
+}
 
 resource "kind_cluster" "default" {
   name            = local.cluster_name
