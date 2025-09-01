@@ -4,7 +4,7 @@ resource "random_pet" "cluster" {
 }
 
 locals {
-  base_cluster_name = var.kind_cluster_name != "" ? var.kind_cluster_name : "${random_pet.cluster.id}"
+  base_cluster_name = var.kind_cluster_name != "" ? var.kind_cluster_name : random_pet.cluster.id
   cluster_name      = var.kind_cluster_ingress ? "${local.base_cluster_name}-ing" : local.base_cluster_name
 }
 
