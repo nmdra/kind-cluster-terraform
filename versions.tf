@@ -2,7 +2,12 @@ terraform {
   required_providers {
     kind = {
       source  = "tehcyx/kind"
-      version = "~> 0.9.0"
+      version = "~> 0.10.0"
+    }
+
+    docker = {
+      source = "kreuzwerker/docker",
+      version = "~>3.6.2"
     }
 
     null = {
@@ -16,6 +21,6 @@ terraform {
     }
   }
 
-  required_version = "~> 1.12.1"
+  required_version = "~> 1.14.0"
 }
 

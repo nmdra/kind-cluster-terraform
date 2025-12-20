@@ -5,7 +5,33 @@ resource "random_pet" "cluster" {
 
 locals {
   base_cluster_name = var.kind_cluster_name != "" ? var.kind_cluster_name : random_pet.cluster.id
-  cluster_name      = var.kind_cluster_ingress ? "${local.base_cluster_name}-ing" : local.base_cluster_name
+  cluster_name      = var.enable_ingress_lb ? "${local.base_cluster_name}-ing" : local.base_cluster_name
+}
+
+provider "docker" {
+  host = "unix:///var/run/docker.sock"
+}
+
+resource "docker_image" "cloud_provider" {
+  count        = var.enable_ingress_lb ? 1 : 0
+
+  name         = "registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.10.0"
+  keep_locally = true
+}
+
+resource "docker_container" "cloud_provider" {
+  count        = var.enable_ingress_lb ? 1 : 0
+  depends_on = [ docker_image.cloud_provider ]
+
+  image = docker_image.cloud_provider[count.index].image_id
+  name  = "cloud-provider-kind"
+
+  network_mode = "kind"
+
+  volumes {
+    host_path      = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
+  }
 }
 
 resource "kind_cluster" "default" {
@@ -54,36 +80,6 @@ resource "null_resource" "set_kubectl_context" {
         --kubeconfig=${pathexpand(var.kind_cluster_config_path)}
 
       echo "Switched kubectl to context: ${kind_cluster.default.name}"
-    EOT
-  }
-}
-
-resource "null_resource" "apply_ingress" {
-  count      = var.kind_cluster_ingress ? 1 : 0
-  depends_on = [ null_resource.set_kubectl_context ]
-
-  provisioner "local-exec" {
-    command = <<EOT
-      kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml \
-        --kubeconfig=${pathexpand(var.kind_cluster_config_path)}
-      echo "Ingress-nginx deployed."
-    EOT
-  } 
-}
-
-resource "null_resource" "wait_for_ingress_nginx" {
-  count      = var.kind_cluster_ingress ? 1 : 0
-  depends_on = [null_resource.apply_ingress]
-
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "Waiting for ingress-nginx controller to be ready..."
-      kubectl wait --namespace ingress-nginx \
-        --for=condition=ready pod \
-        --selector=app.kubernetes.io/component=controller \
-        --timeout=90s \
-        --kubeconfig=${pathexpand(var.kind_cluster_config_path)}
-      echo "Ingress-nginx is ready!"
     EOT
   }
 }
