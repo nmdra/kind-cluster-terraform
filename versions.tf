@@ -6,8 +6,8 @@ terraform {
     }
 
     docker = {
-      source = "kreuzwerker/docker",
-      version = "~>3.6.2"
+      source  = "kreuzwerker/docker",
+      version = "~> 3.6.2"
     }
 
     null = {
@@ -16,7 +16,7 @@ terraform {
     }
 
     random = {
-      source = "hashicorp/random"
+      source  = "hashicorp/random"
       version = "~> 3.7.2"
     }
   }

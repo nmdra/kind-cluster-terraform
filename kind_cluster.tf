@@ -1,37 +1,11 @@
 resource "random_pet" "cluster" {
-  length = 2
+  length    = 2
   separator = "-"
 }
 
 locals {
   base_cluster_name = var.kind_cluster_name != "" ? var.kind_cluster_name : random_pet.cluster.id
   cluster_name      = var.enable_ingress_lb ? "${local.base_cluster_name}-ing" : local.base_cluster_name
-}
-
-provider "docker" {
-  host = "unix:///var/run/docker.sock"
-}
-
-resource "docker_image" "cloud_provider" {
-  count        = var.enable_ingress_lb ? 1 : 0
-
-  name         = "registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.10.0"
-  keep_locally = true
-}
-
-resource "docker_container" "cloud_provider" {
-  count        = var.enable_ingress_lb ? 1 : 0
-  depends_on = [ docker_image.cloud_provider ]
-
-  image = docker_image.cloud_provider[count.index].image_id
-  name  = "cloud-provider-kind"
-
-  network_mode = "kind"
-
-  volumes {
-    host_path      = "/var/run/docker.sock"
-    container_path = "/var/run/docker.sock"
-  }
 }
 
 resource "kind_cluster" "default" {
@@ -50,13 +24,13 @@ resource "kind_cluster" "default" {
       extra_port_mappings {
         container_port = 80
         host_port      = 80
-        protocol = "TCP"
+        protocol       = "TCP"
       }
 
       extra_port_mappings {
         container_port = 443
         host_port      = 443
-        protocol = "TCP"
+        protocol       = "TCP"
       }
     }
 

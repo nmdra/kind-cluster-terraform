@@ -3,10 +3,15 @@ kind: Ingress
 metadata:
   name: httpbin
   namespace: default
+  labels:
+    app.kubernetes.io/name: httpbin
+    app.kubernetes.io/component: ingress
+  annotations:
+    kubernetes.io/ingress.class: cloud-provider-kind
 spec:
+  ingressClassName: cloud-provider-kind
   rules:
-    - host: httpbin.local
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
