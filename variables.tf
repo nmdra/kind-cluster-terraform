@@ -7,7 +7,7 @@ variable "kind_cluster_name" {
 variable "kind_cluster_node_image" {
   type        = string
   description = "node image/version"
-  default     = "kindest/node:v1.33.1"
+  default     = "kindest/node:v1.35.0"
 }
 
 variable "kind_cluster_config_path" {
@@ -16,8 +16,8 @@ variable "kind_cluster_config_path" {
   default     = "~/.kube/config"
 }
 
-variable "kind_cluster_ingress" {
+variable "enable_ingress_lb" {
   type        = bool
-  description = "Enable ingress controller"
+  description = "Enable ingress and load balancer"
   default     = false
 }
