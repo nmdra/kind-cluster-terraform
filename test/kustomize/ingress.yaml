@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/name: httpbin
     app.kubernetes.io/component: ingress
   annotations:
-    kubernetes.io/ingress.class: cloud-provider-kind
 spec:
   ingressClassName: cloud-provider-kind
   rules:
