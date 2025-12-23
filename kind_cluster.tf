@@ -23,13 +23,13 @@ resource "kind_cluster" "default" {
 
       extra_port_mappings {
         container_port = 80
-        host_port      = 80
+        host_port      = 30080
         protocol       = "TCP"
       }
 
       extra_port_mappings {
         container_port = 443
-        host_port      = 443
+        host_port      = 30443
         protocol       = "TCP"
       }
     }
