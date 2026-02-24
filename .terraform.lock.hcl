@@ -63,15 +63,15 @@ provider "registry.terraform.io/kreuzwerker/docker" {
 }
 
 provider "registry.terraform.io/tehcyx/kind" {
-  version     = "0.10.0"
-  constraints = "~> 0.10.0"
+  version     = "0.11.0"
+  constraints = "~> 0.11.0"
   hashes = [
-    "h1:szal0x8fi9ecBp09UtucvbLDAdFk/nFNyRIoO5J95t0=",
-    "zh:5e796753bf5bfcc4afa9dbbcd6dea797a1cd7d1ede3a7b0f8f66fbe1a406dbb8",
-    "zh:7f4d0ff485af1edea535a382ca1feab1f94f984f2a8b4508eeed351c18a0d242",
-    "zh:8e9d4e011c1512cfa52cff29b85382a9d3676a4fffceeba80290d2f30556a64b",
-    "zh:9d3548119a09a0d8c77f2c8b509c370cdbb7e59b37f14b78298c61a3c664bc34",
-    "zh:f424421980e7835b3cc9896786860781bab289dedb51e09cb53a4617b81a834f",
-    "zh:fc5b660b3dd9176507f988d03665c943f70c9ee5a8f5562aea4141077e25e96e",
+    "h1:w1vPgnfTycZq2MXQoS4sJ+URsXMwIv8u2drC9BE8DPA=",
+    "zh:10cf5f11ed1b24bcc2a64ddfe529dbe240ac72c075100039eb8a182abd5a25d8",
+    "zh:1c652afcea840545f9e21cf42369560966eafe52986d578c31a35247624442bf",
+    "zh:8ed94e1387970e7b885c7a68579b17a662d769d04dd3a0917d6c795741d0b97c",
+    "zh:97e3591b821b8a7cd1d0bc6322c1cbeed882ca26ff357cdcfab8dc0b17279090",
+    "zh:d5789b07c0a76d086d19acf948246875cb20bea0826a164f4f2c36b8fe527385",
+    "zh:e5a1117080f6b51e836bf41576e62ee1ea738a5d5fb2f5b0fccb25c942dfb557",
   ]
 }
