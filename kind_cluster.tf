@@ -18,24 +18,27 @@ resource "kind_cluster" "default" {
     kind        = "Cluster"
     api_version = "kind.x-k8s.io/v1alpha4"
 
+    runtime_config = var.runtime_config
+    feature_gates  = var.feature_gates
+
     node {
       role = "control-plane"
 
-      extra_port_mappings {
-        container_port = 80
-        host_port      = 30080
-        protocol = "TCP"
-      }
-
-      extra_port_mappings {
-        container_port = 443
-        host_port      = 30443
-        protocol = "TCP"
+      dynamic "extra_port_mappings" {
+        for_each = var.ingress_port_mappings
+        content {
+          container_port = extra_port_mappings.value.container_port
+          host_port      = extra_port_mappings.value.host_port
+          protocol       = extra_port_mappings.value.protocol
+        }
       }
     }
 
-    node {
-      role = "worker"
+    dynamic "node" {
+      for_each = range(var.worker_node_count)
+      content {
+        role = "worker"
+      }
     }
   }
 }
