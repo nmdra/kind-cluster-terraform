@@ -1,0 +1,19 @@
+# Cluster Infrastructure
+kind_cluster_name        = "research-cluster"
+kind_cluster_node_image  = "kindest/node:v1.35.0"
+kind_cluster_config_path = "~/.kube/config"
+worker_node_count        = 2
+
+# Kubernetes API and Feature Gates
+runtime_config = {
+  "scheduling.k8s.io/v1alpha1" = "true"
+}
+
+feature_gates = {
+  "GenericWorkload"       = true
+  "GangScheduling"        = true
+  "OpportunisticBatching" = true
+}
+
+# Network / Ingress
+enable_ingress_lb = false 
