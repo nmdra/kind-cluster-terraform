@@ -11,11 +11,7 @@ kubectl apply -k kustomize/
 
 ```bash
 # get the Ingress IP
-INGRESS_IP=$(kubectl get ingress example-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+INGRESS_IP=$(kubectl get ingress httpbin -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
 curl  ${INGRESS_IP}/hostname
-
-{
-  "hostname": "go-httpbin"
-}
 ```
