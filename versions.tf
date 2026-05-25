@@ -7,20 +7,20 @@ terraform {
 
     docker = {
       source  = "kreuzwerker/docker",
-      version = "~> 3.6.2"
+      version = "~> 4.4.0"
     }
 
     null = {
       source  = "hashicorp/null"
-      version = "~> 3.2.4"
+      version = "~> 3.3.0"
     }
 
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.7.2"
+      version = "~> 3.9.0"
     }
   }
 
-  required_version = "~> 1.14.0"
+  required_version = "~> 1.15.0"
 }
 

@@ -1,5 +1,5 @@
 tflint {
-  required_version = ">= 0.58.1"
+  required_version = ">= 0.61.0"
 }
 
 config {
