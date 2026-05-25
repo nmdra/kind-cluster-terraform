@@ -32,30 +32,59 @@ This setup optionally enables **Ingress and LoadBalancer support** using **cloud
 
 ## Usage
 
-```bash
-# Create cluster with ingress & load balancer disabled
-terraform apply
+The easiest way to manage this infrastructure is via the provided `Makefile`:
 
-# Create cluster with ingress & load balancer enabled
-terraform apply -var="enable_ingress_lb=true"
+```bash
+# Display all available commands
+make help
+
+# Initialize Terraform
+make init
+
+# Provision cluster using variables defined in terraform.tfvars
+make up
+
+# Provision cluster, overriding variables (e.g., enable Ingress & LoadBalancer)
+make up ENABLE_INGRESS_LB=true WORKER_NODE_COUNT=2
+
+# Check the status of Kind containers, the cluster, and Kubernetes nodes
+make status
+
+# Deploy the test application (httpbin) and verify Ingress routing
+make test
+
+# Destroy the cluster and clean up resources
+make down
+
+# Format and lint Terraform files
+make lint
+make format
 ```
 
-See [`terraform.tfvars.example`](./terraform.tfvars.example) for a complete example of variable values.
+For custom configurations, see [`terraform.tfvars.example`](./terraform.tfvars.example).
 
-👉 **[Test Ingress](./test/README.md)** for example workloads and verification steps.
+👉 **[Test Ingress](./test/README.md)** for example workloads and manual verification steps.
 
 ## Inputs
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `kind_cluster_name` | The name of the cluster. If empty, a random name is generated. | `string` | `""` |
-| `kind_cluster_node_image` | The node image/version to use. | `string` | `"kindest/node:v1.35.0"` |
+| `kind_cluster_node_image` | The node image/version to use. Enforces `kindest/node:v*` pattern. | `string` | `"kindest/node:v1.35.0"` |
 | `kind_cluster_config_path` | The location where this cluster's kubeconfig will be saved to. | `string` | `"~/.kube/config"` |
-| `worker_node_count` | The number of worker nodes to create in the cluster. | `number` | `1` |
+| `worker_node_count` | The number of worker nodes. Enforces $\ge 0$. | `number` | `1` |
 | `runtime_config` | Kubernetes runtime configuration to enable/disable specific API groups. | `map(string)` | n/a |
 | `feature_gates` | Map of Kubernetes feature gates to enable/disable. | `map(bool)` | n/a |
 | `enable_ingress_lb` | Enable ingress and load balancer support. | `bool` | `false` |
-| `ingress_port_mappings` | List of port mappings to expose on the control-plane node. | `list(object)` | See [variables.tf](./variables.tf) |
+| `ingress_port_mappings` | List of control-plane port mappings. Enforces ports inside `1-65535` and protocols `TCP`/`UDP`. | `list(object)` | See [variables.tf](./variables.tf) |
+| `docker_host` | The Docker daemon socket or TCP host URI. Used by the Docker provider. | `string` | `"unix:///var/run/docker.sock"` |
+
+### Input Validations
+
+To prevent runtime errors, the configuration validates:
+- **Node image version**: Ensures `kind_cluster_node_image` uses a legitimate `kindest/node:vX.Y.Z` image syntax.
+- **Worker node count**: Enforces that `worker_node_count` is a non-negative integer.
+- **Port ranges**: Validates that all ports are between 1 and 65535, and protocols are `TCP` or `UDP`.
 
 ## Outputs
 
@@ -68,11 +97,10 @@ See [`terraform.tfvars.example`](./terraform.tfvars.example) for a complete exam
 
 | Name | Version |
 |------|---------|
-| Terraform | `~> 1.14.0` |
+| Terraform | `~> 1.15.0` |
 | [kind](https://registry.terraform.io/providers/tehcyx/kind) | `~> 0.11.0` |
-| [docker](https://registry.terraform.io/providers/kreuzwerker/docker) | `~> 3.6.2` |
-| [null](https://registry.terraform.io/providers/hashicorp/null) | `~> 3.2.4` |
-| [random](https://registry.terraform.io/providers/hashicorp/random) | `~> 3.7.2` |
+| [docker](https://registry.terraform.io/providers/kreuzwerker/docker) | `~> 4.4.0` |
+| [random](https://registry.terraform.io/providers/hashicorp/random) | `~> 3.9.0` |
 
 Additionally, the following tools must be installed locally:
 
@@ -87,3 +115,4 @@ Additionally, the following tools must be installed locally:
 * [What is TFLint?](https://spacelift.io/blog/what-is-tflint)
 * [Configuring Kind with Ingress (NGINX example)](https://nickjanetakis.com/blog/configuring-a-kind-cluster-with-nginx-ingress-using-terraform-and-helm)
 * [Kind Ingress Documentation](https://kind.sigs.k8s.io/docs/user/ingress)
+

@@ -43,8 +43,13 @@ resource "kind_cluster" "default" {
   }
 }
 
-resource "null_resource" "set_kubectl_context" {
-  depends_on = [kind_cluster.default]
+resource "terraform_data" "set_kubectl_context" {
+  input = kind_cluster.default.name
+
+  triggers_replace = [
+    kind_cluster.default.name,
+    kind_cluster.default.kubeconfig_path
+  ]
 
   provisioner "local-exec" {
     command = <<EOT
@@ -58,5 +63,27 @@ resource "null_resource" "set_kubectl_context" {
 
       echo "Switched kubectl to context: ${kind_cluster.default.name}"
     EOT
+  }
+}
+
+resource "docker_image" "cloud_provider" {
+  count        = var.enable_ingress_lb ? 1 : 0
+  name         = "registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.10.0"
+  keep_locally = true
+}
+
+resource "docker_container" "cloud_provider" {
+  count      = var.enable_ingress_lb ? 1 : 0
+  depends_on = [docker_image.cloud_provider, kind_cluster.default]
+
+  image = docker_image.cloud_provider[count.index].image_id
+  name  = "cloud-provider-kind"
+
+  network_mode = "kind"
+  restart      = "on-failure"
+
+  volumes {
+    host_path      = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
   }
 }
