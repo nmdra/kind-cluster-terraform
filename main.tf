@@ -6,6 +6,9 @@ resource "random_pet" "cluster" {
 locals {
   base_cluster_name = var.kind_cluster_name != "" ? var.kind_cluster_name : random_pet.cluster.id
   cluster_name      = var.enable_ingress_lb ? "${local.base_cluster_name}-ing" : local.base_cluster_name
+
+  feature_gates  = var.enable_feature_gates ? var.feature_gates : {}
+  runtime_config = var.enable_runtime_config ? var.runtime_config : {}
 }
 
 resource "kind_cluster" "default" {
@@ -18,8 +21,8 @@ resource "kind_cluster" "default" {
     kind        = "Cluster"
     api_version = "kind.x-k8s.io/v1alpha4"
 
-    runtime_config = var.runtime_config
-    feature_gates  = var.feature_gates
+    runtime_config = local.runtime_config
+    feature_gates  = local.feature_gates
 
     node {
       role = "control-plane"

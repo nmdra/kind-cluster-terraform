@@ -5,6 +5,9 @@ kind_cluster_config_path = "~/.kube/config"
 worker_node_count        = 2
 
 # Kubernetes API and Feature Gates
+enable_feature_gates  = false # Set to true to apply the feature_gates map configuration below
+enable_runtime_config = false # Set to true to apply the runtime_config map configuration below
+
 runtime_config = {
   "scheduling.k8s.io/v1alpha1" = "true"
 }
@@ -16,4 +19,4 @@ feature_gates = {
 }
 
 # Network / Ingress
-enable_ingress_lb = false 
+enable_ingress_lb = false

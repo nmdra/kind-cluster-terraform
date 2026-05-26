@@ -10,8 +10,8 @@ variable "kind_cluster_node_image" {
   default     = "kindest/node:v1.35.0"
 
   validation {
-    condition     = can(regex("^kindest/node:v[0-9]+\\.[0-9]+\\.[0-9]+", var.kind_cluster_node_image))
-    error_message = "The kind_cluster_node_image must be a valid kindest/node image version (e.g., kindest/node:v1.35.0)."
+    condition     = can(regex("^[a-zA-Z0-9_./-]+:[a-zA-Z0-9_.-]+$", var.kind_cluster_node_image))
+    error_message = "The kind_cluster_node_image must be a valid Docker image reference with a tag (e.g., kindest/node:v1.35.0 or kindest/node:custom)."
   }
 }
 
@@ -32,14 +32,28 @@ variable "worker_node_count" {
   }
 }
 
-variable "runtime_config" {
-  type        = map(string)
-  description = "Kubernetes runtime configuration to enable/disable specific API groups."
+variable "enable_feature_gates" {
+  type        = bool
+  description = "Flag to enable custom Kubernetes feature gates configured in var.feature_gates."
+  default     = false
 }
 
 variable "feature_gates" {
   type        = map(bool)
-  description = "Map of Kubernetes feature gates to enable/disable."
+  description = "Map of Kubernetes feature gates to enable/disable. Only applied if var.enable_feature_gates is true."
+  default     = {}
+}
+
+variable "enable_runtime_config" {
+  type        = bool
+  description = "Flag to enable custom Kubernetes runtime configurations configured in var.runtime_config."
+  default     = false
+}
+
+variable "runtime_config" {
+  type        = map(string)
+  description = "Kubernetes runtime configuration to enable/disable specific API groups. Only applied if var.enable_runtime_config is true."
+  default     = {}
 }
 
 variable "enable_ingress_lb" {

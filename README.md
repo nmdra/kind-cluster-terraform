@@ -47,6 +47,12 @@ make up
 # Provision cluster, overriding variables (e.g., enable Ingress & LoadBalancer)
 make up ENABLE_INGRESS_LB=true WORKER_NODE_COUNT=2
 
+# Build a custom Kind node-image from Kubernetes release binaries
+make build-node-image KUBERNETES_VERSION=v1.31.0
+
+# Provision the cluster using the custom-built image
+make up KIND_CLUSTER_NODE_IMAGE=kindest/node:v1.31.0
+
 # Check the status of Kind containers, the cluster, and Kubernetes nodes
 make status
 
@@ -70,11 +76,13 @@ For custom configurations, see [`terraform.tfvars.example`](./terraform.tfvars.e
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `kind_cluster_name` | The name of the cluster. If empty, a random name is generated. | `string` | `""` |
-| `kind_cluster_node_image` | The node image/version to use. Enforces `kindest/node:v*` pattern. | `string` | `"kindest/node:v1.35.0"` |
+| `kind_cluster_node_image` | The node image/version to use. Supports custom built local tags. | `string` | `"kindest/node:v1.35.0"` |
 | `kind_cluster_config_path` | The location where this cluster's kubeconfig will be saved to. | `string` | `"~/.kube/config"` |
 | `worker_node_count` | The number of worker nodes. Enforces $\ge 0$. | `number` | `1` |
-| `runtime_config` | Kubernetes runtime configuration to enable/disable specific API groups. | `map(string)` | n/a |
-| `feature_gates` | Map of Kubernetes feature gates to enable/disable. | `map(bool)` | n/a |
+| `enable_feature_gates` | Flag to enable custom Kubernetes feature gates configured in `feature_gates`. | `bool` | `false` |
+| `feature_gates` | Map of Kubernetes feature gates to enable/disable. Only applied if `enable_feature_gates` is true. | `map(bool)` | `{}` |
+| `enable_runtime_config` | Flag to enable custom Kubernetes runtime configurations configured in `runtime_config`. | `bool` | `false` |
+| `runtime_config` | Kubernetes runtime configuration to enable/disable specific API groups. Only applied if `enable_runtime_config` is true. | `map(string)` | `{}` |
 | `enable_ingress_lb` | Enable ingress and load balancer support. | `bool` | `false` |
 | `ingress_port_mappings` | List of control-plane port mappings. Enforces ports inside `1-65535` and protocols `TCP`/`UDP`. | `list(object)` | See [variables.tf](./variables.tf) |
 | `docker_host` | The Docker daemon socket or TCP host URI. Used by the Docker provider. | `string` | `"unix:///var/run/docker.sock"` |
@@ -82,7 +90,7 @@ For custom configurations, see [`terraform.tfvars.example`](./terraform.tfvars.e
 ### Input Validations
 
 To prevent runtime errors, the configuration validates:
-- **Node image version**: Ensures `kind_cluster_node_image` uses a legitimate `kindest/node:vX.Y.Z` image syntax.
+- **Node image reference**: Ensures `kind_cluster_node_image` is a valid Docker image reference containing a tag (e.g., `kindest/node:vX.Y.Z` or a custom built tag).
 - **Worker node count**: Enforces that `worker_node_count` is a non-negative integer.
 - **Port ranges**: Validates that all ports are between 1 and 65535, and protocols are `TCP` or `UDP`.
 

@@ -13,8 +13,21 @@ endif
 ifdef DOCKER_HOST
   TF_ARGS += -var="docker_host=$(DOCKER_HOST)"
 endif
+ifdef ENABLE_FEATURE_GATES
+  TF_ARGS += -var="enable_feature_gates=$(ENABLE_FEATURE_GATES)"
+endif
+ifdef ENABLE_RUNTIME_CONFIG
+  TF_ARGS += -var="enable_runtime_config=$(ENABLE_RUNTIME_CONFIG)"
+endif
+ifdef KIND_CLUSTER_NODE_IMAGE
+  TF_ARGS += -var="kind_cluster_node_image=$(KIND_CLUSTER_NODE_IMAGE)"
+endif
 
-.PHONY: help init up down status test clean-test lint format
+# Variables for building node images
+KUBERNETES_VERSION ?= v1.35.0
+IMAGE_NAME ?= kindest/node:$(KUBERNETES_VERSION)
+
+.PHONY: help init up down status test clean-test lint format build-node-image
 
 help: ## Show this help message
 	@echo "Usage: make [target]"
@@ -115,3 +128,7 @@ lint: ## Run format check, validate, and tflint
 format: ## Format all Terraform configuration files
 	@echo "Formatting Terraform files..."
 	terraform fmt
+
+build-node-image: ## Build a Kind node-image from Kubernetes release binaries (requires KUBERNETES_VERSION)
+	@echo "Building node-image from Kubernetes release binaries for version $(KUBERNETES_VERSION)..."
+	kind build node-image --type release --image=$(IMAGE_NAME) $(KUBERNETES_VERSION)
