@@ -47,7 +47,10 @@ resource "kind_cluster" "default" {
 }
 
 resource "terraform_data" "set_kubectl_context" {
-  input = kind_cluster.default.name
+  input = {
+    cluster_name    = kind_cluster.default.name
+    kubeconfig_path = pathexpand(var.kind_cluster_config_path)
+  }
 
   triggers_replace = [
     kind_cluster.default.name,
@@ -65,6 +68,49 @@ resource "terraform_data" "set_kubectl_context" {
         --kubeconfig=${pathexpand(var.kind_cluster_config_path)}
 
       echo "Switched kubectl to context: ${kind_cluster.default.name}"
+    EOT
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      CLUSTER_NAME="${self.output.cluster_name}"
+      KUBECONFIG_PATH="${self.output.kubeconfig_path}"
+
+      echo "Cleaning up kubectl context for cluster: $CLUSTER_NAME"
+
+      # Delete the custom short-name context (e.g., "driving-yak")
+      kubectl config delete-context "$CLUSTER_NAME" \
+        --kubeconfig="$KUBECONFIG_PATH" 2>/dev/null && \
+        echo "Deleted context: $CLUSTER_NAME" || \
+        echo "Context $CLUSTER_NAME not found (already removed)"
+
+      # Delete the Kind-prefixed context if still present (e.g., "kind-driving-yak")
+      kubectl config delete-context "kind-$CLUSTER_NAME" \
+        --kubeconfig="$KUBECONFIG_PATH" 2>/dev/null && \
+        echo "Deleted context: kind-$CLUSTER_NAME" || \
+        echo "Context kind-$CLUSTER_NAME not found (already removed)"
+
+      # Clean up orphaned cluster entry
+      kubectl config delete-cluster "kind-$CLUSTER_NAME" \
+        --kubeconfig="$KUBECONFIG_PATH" 2>/dev/null && \
+        echo "Deleted cluster: kind-$CLUSTER_NAME" || \
+        echo "Cluster kind-$CLUSTER_NAME not found (already removed)"
+
+      # Clean up orphaned user entry
+      kubectl config delete-user "kind-$CLUSTER_NAME" \
+        --kubeconfig="$KUBECONFIG_PATH" 2>/dev/null && \
+        echo "Deleted user: kind-$CLUSTER_NAME" || \
+        echo "User kind-$CLUSTER_NAME not found (already removed)"
+
+      # If the current-context pointed to the deleted cluster, unset it
+      CURRENT_CTX=$(kubectl config current-context --kubeconfig="$KUBECONFIG_PATH" 2>/dev/null || echo "")
+      if [ "$CURRENT_CTX" = "$CLUSTER_NAME" ] || [ "$CURRENT_CTX" = "kind-$CLUSTER_NAME" ]; then
+        kubectl config unset current-context --kubeconfig="$KUBECONFIG_PATH"
+        echo "Unset current-context (was: $CURRENT_CTX)"
+      fi
+
+      echo "Kubeconfig cleanup complete."
     EOT
   }
 }

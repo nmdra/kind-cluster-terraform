@@ -15,7 +15,7 @@ This setup optionally enables **Ingress and LoadBalancer support** using **cloud
 - cloud-provider-kind runs as a **Docker container**
 - Configurable worker node count, Kubernetes feature gates, and runtime config
 - Auto-generated cluster names using `random_pet` (with optional override)
-- Automatic kubectl context switching after cluster creation
+- Automatic kubectl context switching after cluster creation and cleanup on destruction
 - Fully controlled using Terraform variables
 - Ideal for local development and testing
 
@@ -29,6 +29,7 @@ This setup optionally enables **Ingress and LoadBalancer support** using **cloud
   - Kubernetes `Service` resources of type `LoadBalancer` are supported
   - Ingress works out-of-the-box without installing a third-party controller
 - After creation, the kubectl context is automatically set to the new cluster.
+- When the cluster is destroyed, the corresponding context, cluster, and user entries are automatically cleaned up from your kubeconfig.
 
 ## Usage
 
