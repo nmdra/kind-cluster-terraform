@@ -24,15 +24,18 @@ resource "kind_cluster" "default" {
     runtime_config = local.runtime_config
     feature_gates  = local.feature_gates
 
-    node {
-      role = "control-plane"
+    dynamic "node" {
+      for_each = range(var.control_plane_node_count)
+      content {
+        role = "control-plane"
 
-      dynamic "extra_port_mappings" {
-        for_each = var.ingress_port_mappings
-        content {
-          container_port = extra_port_mappings.value.container_port
-          host_port      = extra_port_mappings.value.host_port
-          protocol       = extra_port_mappings.value.protocol
+        dynamic "extra_port_mappings" {
+          for_each = node.value == 0 ? var.ingress_port_mappings : []
+          content {
+            container_port = extra_port_mappings.value.container_port
+            host_port      = extra_port_mappings.value.host_port
+            protocol       = extra_port_mappings.value.protocol
+          }
         }
       }
     }

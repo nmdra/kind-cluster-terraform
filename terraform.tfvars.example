@@ -3,6 +3,7 @@ kind_cluster_name        = "research-cluster"
 kind_cluster_node_image  = "kindest/node:v1.35.0"
 kind_cluster_config_path = "~/.kube/config"
 worker_node_count        = 2
+control_plane_node_count = 1  # Use 3 for HA (high availability)
 
 # Kubernetes API and Feature Gates
 enable_feature_gates  = false # Set to true to apply the feature_gates map configuration below

@@ -32,6 +32,17 @@ variable "worker_node_count" {
   }
 }
 
+variable "control_plane_node_count" {
+  type        = number
+  description = "The number of control-plane nodes to create in the cluster. Use 1 for a standard setup or 3+ for HA (high availability)."
+  default     = 1
+
+  validation {
+    condition     = var.control_plane_node_count >= 1
+    error_message = "The control_plane_node_count must be 1 or greater. A cluster requires at least one control-plane node."
+  }
+}
+
 variable "enable_feature_gates" {
   type        = bool
   description = "Flag to enable custom Kubernetes feature gates configured in var.feature_gates."

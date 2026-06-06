@@ -10,6 +10,9 @@ endif
 ifdef WORKER_NODE_COUNT
   TF_ARGS += -var="worker_node_count=$(WORKER_NODE_COUNT)"
 endif
+ifdef CONTROL_PLANE_NODE_COUNT
+  TF_ARGS += -var="control_plane_node_count=$(CONTROL_PLANE_NODE_COUNT)"
+endif
 ifdef DOCKER_HOST
   TF_ARGS += -var="docker_host=$(DOCKER_HOST)"
 endif

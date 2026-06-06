@@ -13,7 +13,8 @@ This setup optionally enables **Ingress and LoadBalancer support** using **cloud
 - Local Kubernetes cluster using **Kind**
 - Optional **Ingress + LoadBalancer** support via **cloud-provider-kind**
 - cloud-provider-kind runs as a **Docker container**
-- Configurable worker node count, Kubernetes feature gates, and runtime config
+- Configurable control-plane and worker node counts (supports HA multi-control-plane setups)
+- Kubernetes feature gates and runtime config
 - Auto-generated cluster names using `random_pet` (with optional override)
 - Automatic kubectl context switching after cluster creation and cleanup on destruction
 - Fully controlled using Terraform variables
@@ -48,6 +49,9 @@ make up
 # Provision cluster, overriding variables (e.g., enable Ingress & LoadBalancer)
 make up ENABLE_INGRESS_LB=true WORKER_NODE_COUNT=2
 
+# Provision an HA cluster with 3 control-plane nodes
+make up CONTROL_PLANE_NODE_COUNT=3 WORKER_NODE_COUNT=2
+
 # Build a custom Kind node-image from Kubernetes release binaries
 make build-node-image KUBERNETES_VERSION=v1.31.0
 
@@ -80,6 +84,7 @@ For custom configurations, see [`terraform.tfvars.example`](./terraform.tfvars.e
 | `kind_cluster_node_image` | The node image/version to use. Supports custom built local tags. | `string` | `"kindest/node:v1.35.0"` |
 | `kind_cluster_config_path` | The location where this cluster's kubeconfig will be saved to. | `string` | `"~/.kube/config"` |
 | `worker_node_count` | The number of worker nodes. Enforces $\ge 0$. | `number` | `1` |
+| `control_plane_node_count` | The number of control-plane nodes. Use `1` for standard or `3+` for HA. Enforces $\ge 1$. | `number` | `1` |
 | `enable_feature_gates` | Flag to enable custom Kubernetes feature gates configured in `feature_gates`. | `bool` | `false` |
 | `feature_gates` | Map of Kubernetes feature gates to enable/disable. Only applied if `enable_feature_gates` is true. | `map(bool)` | `{}` |
 | `enable_runtime_config` | Flag to enable custom Kubernetes runtime configurations configured in `runtime_config`. | `bool` | `false` |
@@ -93,6 +98,7 @@ For custom configurations, see [`terraform.tfvars.example`](./terraform.tfvars.e
 To prevent runtime errors, the configuration validates:
 - **Node image reference**: Ensures `kind_cluster_node_image` is a valid Docker image reference containing a tag (e.g., `kindest/node:vX.Y.Z` or a custom built tag).
 - **Worker node count**: Enforces that `worker_node_count` is a non-negative integer.
+- **Control-plane node count**: Enforces that `control_plane_node_count` is at least 1.
 - **Port ranges**: Validates that all ports are between 1 and 65535, and protocols are `TCP` or `UDP`.
 
 ## Outputs
