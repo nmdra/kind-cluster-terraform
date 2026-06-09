@@ -21,3 +21,13 @@ feature_gates = {
 
 # Network / Ingress
 enable_ingress_lb = false
+
+# Kubeadm Config Patches
+# kubeadm_config_patches = [
+#   <<-EOT
+#   kind: InitConfiguration
+#   nodeRegistration:
+#     kubeletExtraArgs:
+#       node-labels: "my-label=true"
+#   EOT
+# ]

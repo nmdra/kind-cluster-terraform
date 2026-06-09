@@ -27,7 +27,8 @@ resource "kind_cluster" "default" {
     dynamic "node" {
       for_each = range(var.control_plane_node_count)
       content {
-        role = "control-plane"
+        role                   = "control-plane"
+        kubeadm_config_patches = var.kubeadm_config_patches
 
         dynamic "extra_port_mappings" {
           for_each = node.value == 0 ? var.ingress_port_mappings : []
@@ -37,13 +38,36 @@ resource "kind_cluster" "default" {
             protocol       = extra_port_mappings.value.protocol
           }
         }
+
+        dynamic "extra_mounts" {
+          for_each = var.extra_mounts
+          content {
+            host_path       = extra_mounts.value.host_path
+            container_path  = extra_mounts.value.container_path
+            read_only       = extra_mounts.value.read_only
+            propagation     = extra_mounts.value.propagation
+            selinux_relabel = extra_mounts.value.selinux_relabel
+          }
+        }
       }
     }
 
     dynamic "node" {
       for_each = range(var.worker_node_count)
       content {
-        role = "worker"
+        role                   = "worker"
+        kubeadm_config_patches = var.kubeadm_config_patches
+
+        dynamic "extra_mounts" {
+          for_each = var.extra_mounts
+          content {
+            host_path       = extra_mounts.value.host_path
+            container_path  = extra_mounts.value.container_path
+            read_only       = extra_mounts.value.read_only
+            propagation     = extra_mounts.value.propagation
+            selinux_relabel = extra_mounts.value.selinux_relabel
+          }
+        }
       }
     }
   }

@@ -110,3 +110,22 @@ variable "docker_host" {
   description = "The Docker daemon socket or TCP host URI. Used by the Docker provider."
   default     = "unix:///var/run/docker.sock"
 }
+
+variable "kubeadm_config_patches" {
+  type        = list(string)
+  description = "A list of kubeadm config patches to apply to all nodes in the cluster."
+  default     = []
+}
+
+variable "extra_mounts" {
+  type = list(object({
+    host_path       = string
+    container_path  = string
+    read_only       = optional(bool, false)
+    propagation     = optional(string)
+    selinux_relabel = optional(bool)
+  }))
+  description = "A list of extra mounts to apply to the nodes."
+  default     = []
+}
+
