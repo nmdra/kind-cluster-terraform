@@ -1,13 +1,14 @@
 # Test Ingress
 
-### Apply Ingress and Resources
+## Apply the Resources
 
 Apply all resources defined in the `kustomize` directory:
 
 ```bash
 kubectl apply -k kustomize/
 ```
-### Test the Ingress
+
+## Test the Ingress
 
 ```bash
 # get the Ingress IP
