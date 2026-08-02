@@ -114,7 +114,7 @@ To prevent runtime errors, the configuration validates:
 |------|---------|
 | Terraform | `~> 1.15.0` |
 | [kind](https://registry.terraform.io/providers/tehcyx/kind) | `~> 0.11.0` |
-| [docker](https://registry.terraform.io/providers/kreuzwerker/docker) | `~> 4.4.0` |
+| [docker](https://registry.terraform.io/providers/kreuzwerker/docker) | `~> 4.5.0` |
 | [random](https://registry.terraform.io/providers/hashicorp/random) | `~> 3.9.0` |
 
 Additionally, the following tools must be installed locally:
