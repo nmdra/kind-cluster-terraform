@@ -7,11 +7,22 @@ variable "kind_cluster_name" {
 variable "kind_cluster_node_image" {
   type        = string
   description = "The node image/version to use."
-  default     = "kindest/node:v1.35.0"
+  default     = "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5"
 
   validation {
-    condition     = can(regex("^[a-zA-Z0-9_./-]+:[a-zA-Z0-9_.-]+$", var.kind_cluster_node_image))
-    error_message = "The kind_cluster_node_image must be a valid Docker image reference with a tag (e.g., kindest/node:v1.35.0 or kindest/node:custom)."
+    condition     = can(regex("^([a-zA-Z0-9.-]+:[0-9]+/)?[a-zA-Z0-9._-]+(/[a-zA-Z0-9._-]+)*:[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}(@sha256:[a-fA-F0-9]{64})?$", var.kind_cluster_node_image))
+    error_message = "Use a tagged image reference, optionally pinned with @sha256:<64 hex digits> (e.g., kindest/node:custom or localhost:5000/node:dev)."
+  }
+}
+
+variable "local_images" {
+  type        = set(string)
+  description = "Images already in local Docker to load into every cluster node. Use versioned tags; rebuilt tags require explicit replacement."
+  default     = []
+
+  validation {
+    condition     = alltrue([for image in var.local_images : trimspace(image) != ""])
+    error_message = "Each local image must be a nonempty image reference."
   }
 }
 
@@ -71,6 +82,28 @@ variable "enable_ingress_lb" {
   type        = bool
   description = "Enable ingress and load balancer support."
   default     = false
+}
+
+variable "cloud_provider_kind_image" {
+  type        = string
+  description = "Versioned cloud-provider-kind controller image. Used only when enable_ingress_lb is true."
+  default     = "registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.12.0"
+
+  validation {
+    condition     = trimspace(var.cloud_provider_kind_image) != ""
+    error_message = "The cloud-provider-kind image must not be empty."
+  }
+}
+
+variable "cloud_provider_kind_gateway_channel" {
+  type        = string
+  description = "Gateway API channel: standard, experimental, or disabled. Disabling Gateway also disables bundled Ingress translation."
+  default     = "standard"
+
+  validation {
+    condition     = contains(["standard", "experimental", "disabled"], var.cloud_provider_kind_gateway_channel)
+    error_message = "Gateway channel must be standard, experimental, or disabled."
+  }
 }
 
 variable "ingress_port_mappings" {

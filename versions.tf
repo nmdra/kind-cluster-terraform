@@ -2,17 +2,17 @@ terraform {
   required_providers {
     kind = {
       source  = "tehcyx/kind"
-      version = "~> 0.11.0"
+      version = "~> 0.13.0"
     }
 
     docker = {
       source  = "kreuzwerker/docker",
-      version = "~> 4.5.0"
+      version = "~> 4.6.0"
     }
 
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.9.0"
+      version = "~> 3.9.1"
     }
   }
 

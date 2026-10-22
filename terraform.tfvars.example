@@ -1,33 +1,59 @@
 # Cluster Infrastructure
 kind_cluster_name        = "research-cluster"
-kind_cluster_node_image  = "kindest/node:v1.35.0"
+kind_cluster_node_image  = "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5"
 kind_cluster_config_path = "~/.kube/config"
 worker_node_count        = 2
-control_plane_node_count = 1  # Use 3 for HA (high availability)
+control_plane_node_count = 1 # Use 3 for HA (high availability)
 
-# Kubernetes API and Feature Gates
-enable_feature_gates  = false # Set to true to apply the feature_gates map configuration below
-enable_runtime_config = false # Set to true to apply the runtime_config map configuration below
+# Optional application images, already built in the local Docker daemon.
+# Use versioned tags. Loading does not pull images or detect rebuilt tag IDs.
+# local_images = ["myapp:dev-001"]
+
+# Kubernetes API and Feature Gates (opt-in scheduling profile for 1.37)
+enable_feature_gates  = false # Set true to apply the map below
+enable_runtime_config = false # Set true to apply the map below
 
 runtime_config = {
-  "scheduling.k8s.io/v1alpha1" = "true"
+  "scheduling.k8s.io/v1beta1" = "true"
 }
 
 feature_gates = {
-  "GenericWorkload"       = true
-  "GangScheduling"        = true
-  "OpportunisticBatching" = true
+  "GenericWorkload" = true
 }
+# GangScheduling is not a 1.37 gate. OpportunisticBatching is already default-on.
 
-# Network / Ingress
-enable_ingress_lb = false
+# Network / Ingress: controller watches ALL Kind clusters on the Docker daemon.
+enable_ingress_lb                   = false
+cloud_provider_kind_image           = "registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.12.0"
+cloud_provider_kind_gateway_channel = "standard" # standard, experimental, disabled
+# disabled also disables bundled Ingress translation; LoadBalancer remains separate.
+# No connectivity flags are passed, preserving upstream automatic detection.
 
-# Kubeadm Config Patches
+# Kubeadm Config Patches (v1beta4 extra arguments use name/value lists)
+# Include both InitConfiguration and JoinConfiguration to label all node roles.
 # kubeadm_config_patches = [
 #   <<-EOT
+#   apiVersion: kubeadm.k8s.io/v1beta4
 #   kind: InitConfiguration
 #   nodeRegistration:
 #     kubeletExtraArgs:
-#       node-labels: "my-label=true"
+#       - name: node-labels
+#         value: "my-label=true"
+#   EOT
+#   ,
+#   <<-EOT
+#   apiVersion: kubeadm.k8s.io/v1beta4
+#   kind: JoinConfiguration
+#   nodeRegistration:
+#     kubeletExtraArgs:
+#       - name: node-labels
+#         value: "my-label=true"
 #   EOT
 # ]
+
+# Optional host-to-node mounts; paths must exist on the Docker host.
+# extra_mounts = [{
+#   host_path      = "/absolute/path/to/config"
+#   container_path = "/etc/local-config"
+#   read_only      = true
+# }]

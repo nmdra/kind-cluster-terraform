@@ -1,5 +1,6 @@
 # Default target
 .DEFAULT_GOAL := help
+REPO_ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # Optional variables that can be passed to override configurations
 # E.g. make up ENABLE_INGRESS_LB=true WORKER_NODE_COUNT=2
@@ -27,10 +28,10 @@ ifdef KIND_CLUSTER_NODE_IMAGE
 endif
 
 # Variables for building node images
-KUBERNETES_VERSION ?= v1.35.0
+KUBERNETES_VERSION ?= v1.37.0
 IMAGE_NAME ?= kindest/node:$(KUBERNETES_VERSION)
 
-.PHONY: help init up down status test clean-test lint format build-node-image
+.PHONY: help init up down status test clean-test test-plan test-upgrade lint format build-node-image
 
 help: ## Show this help message
 	@echo "Usage: make [target]"
@@ -50,74 +51,60 @@ down: ## Destroy the Kind cluster and resources
 	@echo "Destroying Kind cluster..."
 	terraform destroy -auto-approve $(TF_ARGS)
 
-status: ## Show cluster status, kubeconfig path, docker containers, and k8s nodes
-	@CLUSTER_NAME=$$(terraform output -raw cluster_name 2>/dev/null || echo ""); \
-	if [ -z "$$CLUSTER_NAME" ]; then \
-		echo "No active cluster found in Terraform state. Run 'make up' first."; \
-		exit 0; \
-	fi; \
-	echo "=== Cluster Info ==="; \
-	echo "Name: $$CLUSTER_NAME"; \
-	KUBECONFIG_PATH=$$(terraform output -raw kubeconfig_path 2>/dev/null); \
-	echo "Kubeconfig Path: $$KUBECONFIG_PATH"; \
-	echo ""; \
-	echo "=== Kind/Docker Status ==="; \
-	if docker ps --format '{{.Names}}' | grep -q "^$$CLUSTER_NAME-control-plane$$"; then \
-		echo "Control plane container is running."; \
-	else \
-		echo "Control plane container is NOT running."; \
-	fi; \
-	if docker ps --format '{{.Names}}' | grep -q "^cloud-provider-kind$$"; then \
-		echo "cloud-provider-kind container is running."; \
-	else \
-		echo "cloud-provider-kind container is NOT running (disabled or stopped)."; \
-	fi; \
-	echo ""; \
-	echo "=== Kubernetes Nodes ==="; \
-	if [ -f "$$KUBECONFIG_PATH" ]; then \
-		kubectl get nodes --kubeconfig="$$KUBECONFIG_PATH" || echo "Failed to connect to cluster."; \
-	else \
-		echo "Kubeconfig file not found at $$KUBECONFIG_PATH"; \
-	fi
+# Resolve the target from state, never from the user's active kubectl context.
+define kube_target
+KUBECONFIG_PATH=$$(terraform output -raw kubeconfig_path); \
+CLUSTER_CONTEXT=$$(terraform output -raw cluster_context); \
+if [ -z "$$CLUSTER_CONTEXT" ] || [ ! -f "$$KUBECONFIG_PATH" ]; then \
+	echo "Missing cluster context or kubeconfig. Apply the configuration first." >&2; exit 1; \
+fi; \
+kube() { kubectl --kubeconfig="$$KUBECONFIG_PATH" --context="$$CLUSTER_CONTEXT" --request-timeout=15s "$$@"; }; \
+kube config get-contexts "$$CLUSTER_CONTEXT" -o name | grep -Fx -- "$$CLUSTER_CONTEXT" >/dev/null
+endef
 
-test: ## Deploy test application and verify ingress/load balancer functionality
-	@KUBECONFIG_PATH=$$(terraform output -raw kubeconfig_path 2>/dev/null); \
-	if [ -z "$$KUBECONFIG_PATH" ] || [ ! -f "$$KUBECONFIG_PATH" ]; then \
-		echo "No kubeconfig found. Is the cluster running?"; \
-		exit 1; \
-	fi; \
-	echo "Applying test kustomize resources..."; \
-	kubectl apply -k test/kustomize --kubeconfig="$$KUBECONFIG_PATH"; \
-	echo "Waiting for Ingress to be assigned an IP address..."; \
+status: ## Show cluster status using the context reported by Terraform
+	@set -eu; $(kube_target); \
+	echo "Context: $$CLUSTER_CONTEXT"; \
+	echo "Kubeconfig: $$KUBECONFIG_PATH"; \
+	CLUSTER_NAME=$$(terraform output -raw cluster_name); \
+	echo "=== Kind/Docker containers ==="; \
+	docker ps --filter "label=io.x-k8s.kind.cluster=$$CLUSTER_NAME" --format '{{.Names}}'; \
+	docker ps --filter name='^/cloud-provider-kind$$' --format '{{.Names}}: {{.Status}}'; \
+	echo "=== Kubernetes nodes ==="; \
+	kube get nodes
+
+test: ## Deploy httpbin and verify Ingress routing in the explicit cluster context
+	@set -eu; $(kube_target); \
+	diagnose() { \
+		kube get pods,service,ingress -n default || true; \
+		kube describe ingress httpbin -n default || true; \
+		kube get events -n default --sort-by=.lastTimestamp || true; \
+	}; \
+	trap 'code=$$?; if [ "$$code" -ne 0 ]; then diagnose; fi' EXIT; \
+	kube apply -n default -k "$(REPO_ROOT)/test/kustomize"; \
+	kube rollout status deployment/httpbin -n default --timeout=180s; \
 	attempt=1; \
-	max_attempts=24; \
-	while [ $$attempt -le $$max_attempts ]; do \
-		IP=$$(kubectl get ingress httpbin -o jsonpath='{.status.loadBalancer.ingress[0].ip}' --kubeconfig="$$KUBECONFIG_PATH" 2>/dev/null || echo ""); \
+	while [ $$attempt -le 24 ]; do \
+		IP=$$(kube get ingress httpbin -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}'); \
 		if [ -n "$$IP" ]; then \
-			echo "Ingress IP assigned: $$IP"; \
-			echo "Testing ingress endpoint..."; \
-			sleep 2; \
-			if curl -s -f http://$$IP/hostname > /dev/null; then \
-				echo "Response: $$(curl -s http://$$IP/hostname)"; \
-				echo "Success! Ingress test passed."; \
-				exit 0; \
-			else \
-				echo "Curl failed, retrying..."; \
+			if RESPONSE=$$(curl --noproxy '*' -fsS --connect-timeout 2 --max-time 5 "http://$$IP/hostname") && \
+				printf '%s' "$$RESPONSE" | grep -q '"hostname"'; then \
+				printf 'Ingress passed: %s\n' "$$RESPONSE"; exit 0; \
 			fi; \
 		fi; \
-		echo "Waiting... (attempt $$attempt/$$max_attempts)"; \
-		sleep 5; \
-		attempt=$$((attempt + 1)); \
+		sleep 5; attempt=$$((attempt + 1)); \
 	done; \
-	echo "Timeout waiting for Ingress IP or ingress connection."; \
-	exit 1
+	echo "Timed out waiting for the Ingress address or HTTP response." >&2; exit 1
 
-clean-test: ## Delete test application resources
-	@KUBECONFIG_PATH=$$(terraform output -raw kubeconfig_path 2>/dev/null); \
-	if [ -n "$$KUBECONFIG_PATH" ] && [ -f "$$KUBECONFIG_PATH" ]; then \
-		echo "Deleting test kustomize resources..."; \
-		kubectl delete -k test/kustomize --kubeconfig="$$KUBECONFIG_PATH" --ignore-not-found; \
-	fi
+clean-test: ## Delete httpbin resources from the explicit cluster context
+	@set -eu; $(kube_target); \
+	kube delete -n default -k "$(REPO_ROOT)/test/kustomize" --ignore-not-found --wait=true --timeout=120s
+
+test-plan: ## Run isolated mock-provider plan tests without local tfvars or state
+	bash "$(REPO_ROOT)/test/test_plan.sh"
+
+test-upgrade: ## Run disposable cluster acceptance (requires RUN_CLUSTER_TESTS=1)
+	bash "$(REPO_ROOT)/test/test_upgrade.sh"
 
 lint: ## Run format check, validate, and tflint
 	@echo "Checking formatting (terraform fmt -check)..." \

@@ -7,3 +7,8 @@ output "cluster_name" {
   description = "Name of the Kind cluster"
   value       = kind_cluster.default.name
 }
+
+output "cluster_context" {
+  description = "Canonical kubectl context reported by the Kind provider"
+  value       = kind_cluster.default.context_name
+}

@@ -73,6 +73,17 @@ resource "kind_cluster" "default" {
   }
 }
 
+resource "kind_load" "local_images" {
+  for_each = var.local_images
+
+  image        = each.value
+  cluster_name = kind_cluster.default.name
+
+  lifecycle {
+    replace_triggered_by = [kind_cluster.default]
+  }
+}
+
 resource "terraform_data" "set_kubectl_context" {
   input = {
     cluster_name    = kind_cluster.default.name
@@ -84,26 +95,36 @@ resource "terraform_data" "set_kubectl_context" {
     kind_cluster.default.kubeconfig_path
   ]
 
+  lifecycle {
+    replace_triggered_by = [kind_cluster.default]
+  }
+
   provisioner "local-exec" {
+    environment = {
+      CLUSTER_NAME    = self.input.cluster_name
+      KUBECONFIG_PATH = self.input.kubeconfig_path
+    }
     command = <<EOT
-      kubectl config set-context ${kind_cluster.default.name} \
-        --cluster=kind-${kind_cluster.default.name} \
-        --user=kind-${kind_cluster.default.name} \
-        --kubeconfig=${pathexpand(var.kind_cluster_config_path)}
+      set -e
+      kubectl config set-context "$CLUSTER_NAME" \
+        --cluster="kind-$CLUSTER_NAME" \
+        --user="kind-$CLUSTER_NAME" \
+        --kubeconfig="$KUBECONFIG_PATH"
 
-      kubectl config use-context ${kind_cluster.default.name} \
-        --kubeconfig=${pathexpand(var.kind_cluster_config_path)}
+      kubectl config use-context "$CLUSTER_NAME" \
+        --kubeconfig="$KUBECONFIG_PATH"
 
-      echo "Switched kubectl to context: ${kind_cluster.default.name}"
+      echo "Switched kubectl to context: $CLUSTER_NAME"
     EOT
   }
 
   provisioner "local-exec" {
-    when    = destroy
+    when = destroy
+    environment = {
+      CLUSTER_NAME    = self.output.cluster_name
+      KUBECONFIG_PATH = self.output.kubeconfig_path
+    }
     command = <<EOT
-      CLUSTER_NAME="${self.output.cluster_name}"
-      KUBECONFIG_PATH="${self.output.kubeconfig_path}"
-
       echo "Cleaning up kubectl context for cluster: $CLUSTER_NAME"
 
       # Delete the custom short-name context (e.g., "driving-yak")
@@ -144,7 +165,7 @@ resource "terraform_data" "set_kubectl_context" {
 
 resource "docker_image" "cloud_provider" {
   count        = var.enable_ingress_lb ? 1 : 0
-  name         = "registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.10.0"
+  name         = var.cloud_provider_kind_image
   keep_locally = true
 }
 
@@ -152,8 +173,9 @@ resource "docker_container" "cloud_provider" {
   count      = var.enable_ingress_lb ? 1 : 0
   depends_on = [docker_image.cloud_provider, kind_cluster.default]
 
-  image = docker_image.cloud_provider[count.index].image_id
-  name  = "cloud-provider-kind"
+  image   = docker_image.cloud_provider[count.index].image_id
+  name    = "cloud-provider-kind"
+  command = ["--gateway-channel=${var.cloud_provider_kind_gateway_channel}"]
 
   network_mode = "kind"
   restart      = "on-failure"

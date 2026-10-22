@@ -1,62 +1,42 @@
-#!/bin/bash
-set -e
-
-cd "$(dirname "$0")/.."
-
-echo "Creating test.tfvars..."
-cat <<EOF > test.tfvars
+#!/usr/bin/env bash
+set -euo pipefail
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=helpers.sh
+source "$(dirname "$0")/helpers.sh"
+setup_test
+require_command jq
+cat >"$TEST_ROOT/patches.auto.tfvars" <<'EOF'
+enable_feature_gates = true
+feature_gates = { GenericWorkload = true }
+enable_runtime_config = true
+runtime_config = { "scheduling.k8s.io/v1beta1" = "true" }
 kubeadm_config_patches = [
   <<-EOT
+  apiVersion: kubeadm.k8s.io/v1beta4
   kind: InitConfiguration
   nodeRegistration:
     kubeletExtraArgs:
-      node-labels: "my-custom-test-label=true"
+    - name: node-labels
+      value: my-custom-test-label=true
   EOT
   ,
   <<-EOT
+  apiVersion: kubeadm.k8s.io/v1beta4
   kind: JoinConfiguration
   nodeRegistration:
     kubeletExtraArgs:
-      node-labels: "my-custom-test-label=true"
+    - name: node-labels
+      value: my-custom-test-label=true
   EOT
 ]
 EOF
-
-echo "Running terraform apply..."
-terraform apply -var-file=test.tfvars -auto-approve
-
-echo "Verifying node labels..."
-KUBECONFIG_PATH=$(terraform output -raw kubeconfig_path 2>/dev/null || echo "")
-if [ -z "$KUBECONFIG_PATH" ]; then
-  echo "Error: Kubeconfig path not found."
-  exit 1
-fi
-
-# Kind config path might contain ~, we need to expand it if used directly with kubectl,
-# but terraform output usually gives absolute path if pathexpand was used.
-KUBECONFIG_EXPANDED=$(eval echo $KUBECONFIG_PATH)
-export KUBECONFIG=$KUBECONFIG_EXPANDED
-
-# Wait for nodes to be ready
-echo "Waiting for nodes to be ready..."
-kubectl wait --for=condition=Ready nodes --all --timeout=120s
-
-# Check if any node has the label my-custom-test-label=true
-echo "Checking for labeled nodes..."
-NODE_COUNT=$(kubectl get nodes -l my-custom-test-label=true --no-headers 2>/dev/null | grep -c . || true)
-
-if [ "$NODE_COUNT" -gt 0 ]; then
-  echo "Success: Found $NODE_COUNT node(s) with label my-custom-test-label=true"
-else
-  echo "Error: No nodes found with the expected label."
-  kubectl get nodes --show-labels
-  terraform destroy -var-file=test.tfvars -auto-approve
-  rm test.tfvars
-  exit 1
-fi
-
-echo "Cleaning up..."
-terraform destroy -var-file=test.tfvars -auto-approve
-rm test.tfvars
-
-echo "Test passed successfully!"
+init_test
+apply_test -no-color
+wait_nodes
+[[ $(kube get nodes -o name | wc -l) -eq 2 ]] || fail 'Expected two nodes.'
+[[ $(kube get nodes -l my-custom-test-label=true -o name | wc -l) -eq 2 ]] || fail 'Both nodes must have the kubeadm label.'
+# Query discovery directly so a missing group/version fails instead of using a cached list.
+kube get --raw /apis/scheduling.k8s.io/v1beta1 >"$TEST_ROOT/scheduling-discovery.json"
+jq -e '([.resources[].name] | index("workloads") != null) and ([.resources[].name] | index("podgroups") != null)' \
+  "$TEST_ROOT/scheduling-discovery.json" >/dev/null
+printf 'Kubeadm label and scheduling discovery checks passed.\n'
